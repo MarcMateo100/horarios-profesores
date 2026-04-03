@@ -15,6 +15,7 @@
       --amber: #ffcb52;
       --lime: #9dff6f;
       --danger: #ff6b6b;
+      --steel: #64748b;
       --text: #ecf7ff;
       --muted: #90a5bd;
       --shadow: 0 0 22px rgba(126, 245, 255, 0.3);
@@ -301,18 +302,25 @@
       transform: scale(0.97);
     }
 
+    .touch-btn.disabled {
+      color: rgba(203, 213, 225, 0.5);
+      background: linear-gradient(180deg, rgba(51, 65, 85, 0.92), rgba(30, 41, 59, 0.92));
+      border-color: rgba(148, 163, 184, 0.25);
+      box-shadow: none;
+    }
+
+    .touch-btn.active-mode {
+      color: var(--amber);
+      border-color: rgba(255, 203, 82, 0.5);
+      box-shadow: 0 0 22px rgba(255, 203, 82, 0.26);
+    }
+
     .status-strip {
       display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
+      justify-content: flex-end;
       margin-top: 10px;
       font-size: 0.88rem;
       color: var(--muted);
-    }
-
-    .status-strip strong {
-      color: var(--lime);
     }
 
     .touch-controls-mobile {
@@ -347,7 +355,7 @@
 <body>
   <main class="cabinet">
     <header class="marquee">
-      <span>Snake / Arkanoid Crossover</span>
+      <span>Ready Player One</span>
       <small>Arcade Mode</small>
     </header>
 
@@ -378,7 +386,7 @@
           <div class="overlay" id="overlay">
             <h1 class="overlay-title" id="overlayTitle">Insert Coin</h1>
             <p class="overlay-text" id="overlayText">
-              Empieza en Snake. Cada manzana vale 100 puntos. Al llegar a 500 pasaras a Arkanoid, y cuando rompas los 20 lingotes volveras a Snake para seguir la partida.
+              Empieza en Snake y encadena Arkanoid, Flappy Bird y Space Invaders en una sola partida arcade.
             </p>
             <div class="countdown" id="countdown" hidden>3</div>
             <button class="coin-btn" id="coinButton" type="button">Insert Coin</button>
@@ -386,8 +394,6 @@
         </div>
 
         <div class="status-strip">
-          <div>Snake: <strong>100 puntos</strong> por manzana</div>
-          <div>Arkanoid: <strong>25 puntos</strong> por lingote</div>
           <div id="deviceHint">Detectando control...</div>
         </div>
       </div>
@@ -409,7 +415,7 @@
       <div class="info-box">
         <h2 class="section-title">Reglas</h2>
         <p>
-          La serpiente crece una casilla por manzana. Si en Snake tocas la pared, la partida termina. En Arkanoid pierdes si la pelota golpea la parte inferior de la pantalla.
+          Snake termina al tocar pared. Arkanoid termina si cae la pelota. Flappy termina al chocar. En Space Invaders eliminas 20 extraterrestres a 25 puntos cada uno y pierdes si te alcanzan.
         </p>
       </div>
 
@@ -452,14 +458,24 @@
     const SNAKE_CELL = 20;
     const SNAKE_COLS = WIDTH / SNAKE_CELL;
     const SNAKE_ROWS = HEIGHT / SNAKE_CELL;
-    const PHASE_STEP = 500;
+    const FLAPPY_DURATION = 30000;
+    const MODE_LABELS = {
+      snake: "Snake",
+      arkanoid: "Arkanoid",
+      flappy: "Flappy",
+      invaders: "Invaders"
+    };
+    const MODE_SEQUENCE = ["snake", "arkanoid", "flappy", "invaders"];
 
     const state = {
       running: false,
       gameOver: false,
       score: 0,
       mode: "snake",
+      dummyMode: false,
       nextModeScore: 500,
+      cycleIndex: 0,
+      initialCycleComplete: false,
       animationId: 0,
       lastTimestamp: 0,
       countdownTimer: 0,
@@ -482,6 +498,26 @@
         moveLeft: false,
         moveRight: false,
         speedMultiplier: 1
+      },
+      flappy: {
+        bird: null,
+        pipes: [],
+        spawnClock: 0,
+        spawnInterval: 1400,
+        elapsed: 0,
+        duration: FLAPPY_DURATION,
+        speedMultiplier: 1,
+        collisionFlash: 0
+      },
+      invaders: {
+        player: null,
+        bullets: [],
+        aliens: [],
+        direction: 1,
+        moveClock: 0,
+        moveDelay: 520,
+        moveLeft: false,
+        moveRight: false
       }
     };
 
@@ -489,11 +525,86 @@
       return String(value).padStart(4, "0");
     }
 
+    function getModeLabel() {
+      return MODE_LABELS[state.mode];
+    }
+
+    function getRandomMode() {
+      return MODE_SEQUENCE[Math.floor(Math.random() * MODE_SEQUENCE.length)];
+    }
+
+    function getNextMode() {
+      if (!state.initialCycleComplete) {
+        const nextIndex = state.cycleIndex + 1;
+        if (nextIndex >= MODE_SEQUENCE.length) {
+          state.initialCycleComplete = true;
+          state.cycleIndex = MODE_SEQUENCE.length - 1;
+          return getRandomMode();
+        }
+        state.cycleIndex = nextIndex;
+        return MODE_SEQUENCE[nextIndex];
+      }
+      return getRandomMode();
+    }
+
+    function launchMode(mode) {
+      if (mode === "snake") {
+        resetSnakePhase();
+        updateHud("Snake");
+        startLoop();
+        return;
+      }
+      if (mode === "arkanoid") {
+        resetArkanoidPhase();
+        updateHud("Arkanoid");
+        startLoop();
+        return;
+      }
+      if (mode === "flappy") {
+        resetFlappyPhase();
+        updateHud("Flappy");
+        startLoop();
+        return;
+      }
+      resetInvadersPhase();
+      updateHud("Invaders");
+      startLoop();
+    }
+
+    function transitionToNextMode(messagePrefix) {
+      const nextMode = getNextMode();
+      beginCountdown("Cambio de fase", `${messagePrefix} ${MODE_LABELS[nextMode]}...`, () => {
+        if (nextMode === "snake") {
+          state.nextModeScore = state.score + 500;
+        }
+        launchMode(nextMode);
+      });
+    }
+
+    function getRemainingBricks() {
+      return state.arkanoid.bricks.filter((brick) => brick.alive).length;
+    }
+
+    function getTargetLabel() {
+      if (state.mode === "snake") {
+        return String(state.nextModeScore);
+      }
+      if (state.mode === "arkanoid") {
+        return `${getRemainingBricks()} brick`;
+      }
+      if (state.mode === "invaders") {
+        return `${state.invaders.aliens.length} alien`;
+      }
+      const seconds = Math.max(0, Math.ceil((state.flappy.duration - state.flappy.elapsed) / 1000));
+      return `${seconds}s`;
+    }
+
     function updateHud(statusText) {
       scoreValue.textContent = padScore(state.score);
-      modeValue.textContent = state.mode === "snake" ? "Snake" : "Arkanoid";
-      targetValue.textContent = String(state.nextModeScore);
-      stateValue.textContent = statusText;
+      modeValue.textContent = getModeLabel();
+      targetValue.textContent = getTargetLabel();
+      stateValue.textContent = state.dummyMode ? `${statusText} / Dummy` : statusText;
+      updateTouchControlState();
     }
 
     function showOverlay(title, text, showButton) {
@@ -556,6 +667,69 @@
       state.arkanoid.moveLeft = false;
       state.arkanoid.moveRight = false;
       state.arkanoid.bricks = buildBricks();
+    }
+
+    function resetFlappyBirdPosition() {
+      state.flappy.bird = {
+        x: WIDTH * 0.28,
+        y: HEIGHT * 0.45,
+        radius: 15,
+        vy: 0
+      };
+    }
+
+    function spawnFlappyPipe() {
+      const gapBase = 170 / state.flappy.speedMultiplier;
+      const gap = Math.max(118, gapBase);
+      const topHeight = 70 + Math.random() * (HEIGHT - gap - 220);
+      state.flappy.pipes.push({
+        x: WIDTH + 48,
+        width: 66,
+        gapY: topHeight,
+        gapHeight: gap,
+        speed: 190 * state.flappy.speedMultiplier
+      });
+    }
+
+    function resetFlappyPhase() {
+      state.mode = "flappy";
+      state.flappy.speedMultiplier *= 1.1;
+      state.flappy.pipes = [];
+      state.flappy.spawnClock = 0;
+      state.flappy.elapsed = 0;
+      state.flappy.collisionFlash = 0;
+      resetFlappyBirdPosition();
+      spawnFlappyPipe();
+    }
+
+    function resetInvadersPhase() {
+      state.mode = "invaders";
+      state.invaders.player = {
+        x: WIDTH / 2 - 24,
+        y: HEIGHT - 46,
+        width: 48,
+        height: 18,
+        speed: state.mobileControls ? 300 : 360,
+        cooldown: 0
+      };
+      state.invaders.bullets = [];
+      state.invaders.direction = 1;
+      state.invaders.moveClock = 0;
+      state.invaders.moveDelay = 520;
+      state.invaders.moveLeft = false;
+      state.invaders.moveRight = false;
+      state.invaders.aliens = [];
+
+      for (let row = 0; row < 4; row += 1) {
+        for (let col = 0; col < 5; col += 1) {
+          state.invaders.aliens.push({
+            x: 42 + col * 68,
+            y: 88 + row * 54,
+            width: 34,
+            height: 24
+          });
+        }
+      }
     }
 
     function buildBricks() {
@@ -653,6 +827,76 @@
       ctx.fill();
     }
 
+    function drawFlappy() {
+      const bird = state.flappy.bird;
+      drawBackgroundGrid();
+
+      ctx.fillStyle = "rgba(126, 245, 255, 0.12)";
+      for (let i = 0; i < 6; i += 1) {
+        ctx.fillRect(i * 80 + 20, 0, 2, HEIGHT);
+      }
+
+      state.flappy.pipes.forEach((pipe) => {
+        ctx.fillStyle = "#66f5c6";
+        ctx.shadowColor = "#66f5c6";
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.roundRect(pipe.x, 0, pipe.width, pipe.gapY, 8);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.roundRect(pipe.x, pipe.gapY + pipe.gapHeight, pipe.width, HEIGHT - pipe.gapY - pipe.gapHeight, 8);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+
+      ctx.fillStyle = "#ffcb52";
+      ctx.beginPath();
+      ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#111";
+      ctx.beginPath();
+      ctx.arc(bird.x + 4, bird.y - 4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      const seconds = Math.max(0, Math.ceil((state.flappy.duration - state.flappy.elapsed) / 1000));
+      ctx.fillStyle = "#ecf7ff";
+      ctx.font = "bold 20px Trebuchet MS";
+      ctx.fillText(`Tiempo ${seconds}s`, 18, 28);
+
+      if (state.flappy.collisionFlash > 0) {
+        ctx.fillStyle = "rgba(255, 107, 107, 0.18)";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      }
+    }
+
+    function drawInvaders() {
+      drawBackgroundGrid();
+
+      const player = state.invaders.player;
+      ctx.fillStyle = "#ffcb52";
+      ctx.beginPath();
+      ctx.roundRect(player.x, player.y, player.width, player.height, 6);
+      ctx.fill();
+      ctx.fillRect(player.x + player.width / 2 - 3, player.y - 10, 6, 10);
+
+      ctx.fillStyle = "#7ef5ff";
+      state.invaders.bullets.forEach((bullet) => {
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+      });
+
+      ctx.fillStyle = "#9dff6f";
+      state.invaders.aliens.forEach((alien) => {
+        ctx.beginPath();
+        ctx.roundRect(alien.x, alien.y, alien.width, alien.height, 6);
+        ctx.fill();
+        ctx.fillStyle = "#041016";
+        ctx.fillRect(alien.x + 6, alien.y + 8, 4, 4);
+        ctx.fillRect(alien.x + alien.width - 10, alien.y + 8, 4, 4);
+        ctx.fillStyle = "#9dff6f";
+      });
+    }
+
     function drawFrame() {
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
       ctx.fillStyle = "#051218";
@@ -660,12 +904,20 @@
 
       if (state.mode === "snake") {
         drawSnake();
-      } else {
+      } else if (state.mode === "arkanoid") {
         drawArkanoid();
+      } else if (state.mode === "flappy") {
+        drawFlappy();
+      } else {
+        drawInvaders();
       }
     }
 
     function triggerGameOver(reason) {
+      if (state.dummyMode) {
+        updateHud("Dummy");
+        return;
+      }
       state.running = false;
       state.gameOver = true;
       cancelAnimationFrame(state.animationId);
@@ -706,6 +958,43 @@
       }
     }
 
+    function flapBird() {
+      if (state.mode !== "flappy" || !state.running) {
+        return;
+      }
+      state.flappy.bird.vy = -320;
+    }
+
+    function handleInvadersInput(direction, pressed) {
+      if (state.mode !== "invaders") {
+        return;
+      }
+      if (direction === "left") {
+        state.invaders.moveLeft = pressed;
+      }
+      if (direction === "right") {
+        state.invaders.moveRight = pressed;
+      }
+    }
+
+    function shootInvaderBullet() {
+      if (state.mode !== "invaders" || !state.running) {
+        return;
+      }
+      const player = state.invaders.player;
+      if (player.cooldown > 0) {
+        return;
+      }
+      state.invaders.bullets.push({
+        x: player.x + player.width / 2 - 2,
+        y: player.y - 12,
+        width: 4,
+        height: 12,
+        speed: 420
+      });
+      player.cooldown = 220;
+    }
+
     function updateSnake(delta) {
       state.snake.moveClock += delta;
       if (state.snake.moveClock < state.snake.moveDelay) {
@@ -721,8 +1010,13 @@
       };
 
       if (nextHead.x < 0 || nextHead.x >= SNAKE_COLS || nextHead.y < 0 || nextHead.y >= SNAKE_ROWS) {
-        triggerGameOver("La serpiente ha chocado contra la pared.");
-        return;
+        if (state.dummyMode) {
+          nextHead.x = (nextHead.x + SNAKE_COLS) % SNAKE_COLS;
+          nextHead.y = (nextHead.y + SNAKE_ROWS) % SNAKE_ROWS;
+        } else {
+          triggerGameOver("La serpiente ha chocado contra la pared.");
+          return;
+        }
       }
 
       state.snake.body.unshift(nextHead);
@@ -735,12 +1029,7 @@
         placeApple();
         updateHud("Snake");
         if (state.score >= state.nextModeScore) {
-          beginCountdown("Cambio de fase", "Preparando Arkanoid...", () => {
-            state.nextModeScore += PHASE_STEP;
-            resetArkanoidPhase();
-            updateHud("Arkanoid");
-            startLoop();
-          });
+          transitionToNextMode("Preparando");
         }
       } else {
         state.snake.body.pop();
@@ -784,8 +1073,14 @@
         ball.vy *= -1;
       }
       if (ball.y - ball.radius > HEIGHT) {
-        triggerGameOver("La pelota ha golpeado la parte inferior de la pantalla.");
-        return;
+        if (state.dummyMode) {
+          ball.y = HEIGHT - 120;
+          ball.x = WIDTH / 2;
+          ball.vy = -Math.abs(ball.vy);
+        } else {
+          triggerGameOver("La pelota ha golpeado la parte inferior de la pantalla.");
+          return;
+        }
       }
 
       if (
@@ -820,12 +1115,137 @@
 
       const remaining = state.arkanoid.bricks.filter((brick) => brick.alive).length;
       if (remaining === 0) {
-        beginCountdown("Cambio de fase", "Preparando Snake...", () => {
-          state.nextModeScore += PHASE_STEP;
-          resetSnakePhase();
-          updateHud("Snake");
-          startLoop();
+        transitionToNextMode("Preparando");
+      }
+    }
+
+    function updateFlappy(delta) {
+      const bird = state.flappy.bird;
+      const seconds = delta / 1000;
+      const gravity = 760 * state.flappy.speedMultiplier;
+
+      state.flappy.elapsed += delta;
+      state.flappy.spawnClock += delta;
+      state.flappy.collisionFlash = Math.max(0, state.flappy.collisionFlash - delta);
+
+      bird.vy += gravity * seconds;
+      bird.y += bird.vy * seconds;
+
+      if (state.flappy.spawnClock >= state.flappy.spawnInterval) {
+        state.flappy.spawnClock = 0;
+        spawnFlappyPipe();
+      }
+
+      state.flappy.pipes.forEach((pipe) => {
+        pipe.x -= pipe.speed * seconds;
+      });
+      state.flappy.pipes = state.flappy.pipes.filter((pipe) => pipe.x + pipe.width > -10);
+
+      const hitBounds = bird.y - bird.radius <= 0 || bird.y + bird.radius >= HEIGHT;
+      const hitPipe = state.flappy.pipes.some((pipe) => {
+        const overlapsX = bird.x + bird.radius >= pipe.x && bird.x - bird.radius <= pipe.x + pipe.width;
+        const insideGap = bird.y - bird.radius > pipe.gapY && bird.y + bird.radius < pipe.gapY + pipe.gapHeight;
+        return overlapsX && !insideGap;
+      });
+
+      if (hitBounds || hitPipe) {
+        if (state.dummyMode) {
+          resetFlappyBirdPosition();
+          state.flappy.pipes = [];
+          state.flappy.spawnClock = 0;
+          spawnFlappyPipe();
+        } else {
+          triggerGameOver("Has chocado en Flappy Bird.");
+          return;
+        }
+      }
+
+      targetValue.textContent = getTargetLabel();
+
+      if (state.flappy.elapsed >= state.flappy.duration) {
+        state.score += 500;
+        transitionToNextMode("Preparando");
+      }
+    }
+
+    function updateInvaders(delta) {
+      const player = state.invaders.player;
+      const seconds = delta / 1000;
+
+      if (state.invaders.moveLeft) {
+        player.x -= player.speed * seconds;
+      }
+      if (state.invaders.moveRight) {
+        player.x += player.speed * seconds;
+      }
+      player.x = Math.max(10, Math.min(WIDTH - player.width - 10, player.x));
+      player.cooldown = Math.max(0, player.cooldown - delta);
+
+      state.invaders.bullets.forEach((bullet) => {
+        bullet.y -= bullet.speed * seconds;
+      });
+      state.invaders.bullets = state.invaders.bullets.filter((bullet) => bullet.y + bullet.height > 0);
+
+      state.invaders.moveClock += delta;
+      if (state.invaders.moveClock >= state.invaders.moveDelay) {
+        state.invaders.moveClock = 0;
+        const stepX = 18 * state.invaders.direction;
+        const hitSide = state.invaders.aliens.some((alien) => {
+          const nextX = alien.x + stepX;
+          return nextX <= 8 || nextX + alien.width >= WIDTH - 8;
         });
+
+        if (hitSide) {
+          state.invaders.direction *= -1;
+          state.invaders.aliens.forEach((alien) => {
+            alien.y += 20;
+          });
+        } else {
+          state.invaders.aliens.forEach((alien) => {
+            alien.x += stepX;
+          });
+        }
+      }
+
+      const survivors = [];
+      for (const alien of state.invaders.aliens) {
+        let destroyed = false;
+        for (const bullet of state.invaders.bullets) {
+          const hit =
+            bullet.x + bullet.width >= alien.x &&
+            bullet.x <= alien.x + alien.width &&
+            bullet.y <= alien.y + alien.height &&
+            bullet.y + bullet.height >= alien.y;
+          if (hit) {
+            bullet.y = -100;
+            destroyed = true;
+            state.score += 25;
+            break;
+          }
+        }
+        if (!destroyed) {
+          survivors.push(alien);
+        }
+      }
+      state.invaders.aliens = survivors;
+      state.invaders.bullets = state.invaders.bullets.filter((bullet) => bullet.y + bullet.height > 0);
+
+      const alienReachedPlayer = state.invaders.aliens.some((alien) => alien.y + alien.height >= player.y);
+      if (alienReachedPlayer) {
+        if (state.dummyMode) {
+          state.invaders.aliens.forEach((alien) => {
+            alien.y = Math.max(88, alien.y - 120);
+          });
+        } else {
+          triggerGameOver("Un extraterrestre te ha alcanzado.");
+          return;
+        }
+      }
+
+      targetValue.textContent = getTargetLabel();
+
+      if (state.invaders.aliens.length === 0) {
+        transitionToNextMode("Preparando");
       }
     }
 
@@ -839,8 +1259,12 @@
 
       if (state.mode === "snake") {
         updateSnake(delta);
-      } else {
+      } else if (state.mode === "arkanoid") {
         updateArkanoid(delta);
+      } else if (state.mode === "flappy") {
+        updateFlappy(delta);
+      } else {
+        updateInvaders(delta);
       }
 
       drawFrame();
@@ -891,10 +1315,16 @@
     function startGame() {
       clearInterval(state.countdownTimer);
       state.score = 0;
+      state.dummyMode = false;
       state.nextModeScore = 500;
+      state.cycleIndex = 0;
+      state.initialCycleComplete = false;
       state.gameOver = false;
       state.snake.length = 3;
       state.arkanoid.speedMultiplier = 1;
+      state.flappy.speedMultiplier = 1;
+      state.invaders.moveLeft = false;
+      state.invaders.moveRight = false;
       resetSnakePhase();
       updateHud("Snake");
       beginCountdown("Ready?", "La partida empieza en Snake. Come 5 manzanas para saltar a Arkanoid.", () => {
@@ -910,16 +1340,39 @@
     function applyControlMode() {
       state.mobileControls = isMobileLike();
       if (state.mobileControls) {
-        controlsHint.textContent = "En movil aparecen botones con flechas para las 4 direcciones.";
+        controlsHint.textContent = "Los botones cambian segun el juego activo.";
         deviceHint.textContent = "Control tactil activo";
         touchControls.classList.add("active");
         touchControlsMobile.classList.add("active");
       } else {
-        controlsHint.textContent = "Se juega con las flechas del teclado. En Arkanoid usa izquierda y derecha.";
+        controlsHint.textContent = "Teclado: Snake usa las 4 flechas, Arkanoid izquierda y derecha, Flappy arriba, Invaders izquierda, derecha y arriba para disparar.";
         deviceHint.textContent = "Control por teclado activo";
         touchControls.classList.remove("active");
         touchControlsMobile.classList.remove("active");
       }
+      updateTouchControlState();
+    }
+
+    function updateTouchControlState() {
+      [touchControls, touchControlsMobile].forEach((container) => {
+        container.querySelectorAll(".touch-btn").forEach((button) => {
+          const direction = button.dataset.dir;
+          let enabled = false;
+
+          if (state.mode === "snake") {
+            enabled = true;
+          } else if (state.mode === "arkanoid") {
+            enabled = direction === "left" || direction === "right";
+          } else if (state.mode === "flappy") {
+            enabled = direction === "up";
+          } else if (state.mode === "invaders") {
+            enabled = direction === "left" || direction === "right" || direction === "up";
+          }
+
+          button.classList.toggle("disabled", !enabled);
+          button.classList.toggle("active-mode", enabled);
+        });
+      });
     }
 
     function onKeyDown(event) {
@@ -928,25 +1381,37 @@
         event.preventDefault();
       }
 
+      if (key === "d" || key === "D") {
+        state.dummyMode = !state.dummyMode;
+        updateHud(state.running ? getModeLabel() : "Ready");
+        return;
+      }
+
       if (key === "ArrowUp") {
         handleSnakeInput("up");
+        flapBird();
+        shootInvaderBullet();
       } else if (key === "ArrowDown") {
         handleSnakeInput("down");
       } else if (key === "ArrowLeft") {
         handleSnakeInput("left");
         handleArkanoidInput("left", true);
+        handleInvadersInput("left", true);
       } else if (key === "ArrowRight") {
         handleSnakeInput("right");
         handleArkanoidInput("right", true);
+        handleInvadersInput("right", true);
       }
     }
 
     function onKeyUp(event) {
       if (event.key === "ArrowLeft") {
         handleArkanoidInput("left", false);
+        handleInvadersInput("left", false);
       }
       if (event.key === "ArrowRight") {
         handleArkanoidInput("right", false);
+        handleInvadersInput("right", false);
       }
     }
 
@@ -961,6 +1426,19 @@
               handleSnakeInput(direction);
               return;
             }
+            if (state.mode === "flappy" && direction === "up") {
+              flapBird();
+              return;
+            }
+            if (state.mode === "invaders") {
+              if (direction === "up") {
+                shootInvaderBullet();
+                return;
+              }
+              if (direction === "left" || direction === "right") {
+                handleInvadersInput(direction, true);
+              }
+            }
             if (direction === "left" || direction === "right") {
               handleArkanoidInput(direction, true);
             }
@@ -969,12 +1447,14 @@
           button.addEventListener("pointerup", () => {
             if (direction === "left" || direction === "right") {
               handleArkanoidInput(direction, false);
+              handleInvadersInput(direction, false);
             }
           });
 
           button.addEventListener("pointerleave", () => {
             if (direction === "left" || direction === "right") {
               handleArkanoidInput(direction, false);
+              handleInvadersInput(direction, false);
             }
           });
         });
@@ -986,7 +1466,7 @@
       resetSnakePhase();
       updateHud("Ready");
       drawFrame();
-      showOverlay("Insert Coin", "Empieza la partida arcade. Snake y Arkanoid se iran alternando cada 500 puntos.", true);
+      showOverlay("Insert Coin", "Empieza en Snake, pasa por Arkanoid, Flappy y Space Invaders, y sigue encadenando fases arcade.", true);
 
       coinButton.addEventListener("click", startGame);
       window.addEventListener("keydown", onKeyDown, { passive: false });
