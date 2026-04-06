@@ -110,27 +110,42 @@
       border-radius: 18px;
       padding: 14px;
       box-shadow: inset 0 0 42px rgba(0, 0, 0, 0.72), 0 0 24px rgba(126, 245, 255, 0.12);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .game-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 420px) minmax(280px, 340px);
+      align-items: start;
+      justify-content: center;
+      gap: 16px;
+      width: 100%;
+      max-width: 716px;
     }
 
     .hud {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: 0.65fr 1.6fr;
       gap: 10px;
-      margin-bottom: 14px;
+      width: 100%;
+      align-self: start;
     }
 
     .hud-card {
       background: rgba(7, 12, 24, 0.84);
       border: 1px solid var(--line);
       border-radius: 12px;
-      padding: 10px 12px;
-      min-height: 70px;
+      padding: 14px 14px 16px;
+      min-height: 96px;
       box-shadow: var(--shadow);
+      text-align: center;
     }
 
     .hud-card span {
       display: block;
-      font-size: 0.73rem;
+      font-size: 0.7rem;
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 0.14em;
@@ -139,8 +154,16 @@
 
     .hud-card strong {
       display: block;
-      font-size: clamp(1rem, 2.6vw, 1.6rem);
+      font-size: clamp(1.05rem, 2vw, 1.55rem);
       color: var(--cyan);
+      line-height: 1.15;
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+
+    .hud-card.mode-card,
+    .hud-card.state-card {
+      min-width: 0;
     }
 
     .stage {
@@ -157,6 +180,8 @@
       box-shadow:
         inset 0 0 40px rgba(0, 0, 0, 0.7),
         0 0 24px rgba(126, 245, 255, 0.08);
+      width: min(100%, 420px);
+      justify-self: center;
     }
 
     canvas {
@@ -278,6 +303,7 @@
       grid-template-areas:
         ". up ."
         "left down right";
+      justify-content: center;
     }
 
     .touch-btn {
@@ -317,7 +343,8 @@
 
     .status-strip {
       display: flex;
-      justify-content: flex-end;
+      justify-content: center;
+      width: 100%;
       margin-top: 10px;
       font-size: 0.88rem;
       color: var(--muted);
@@ -327,11 +354,19 @@
       display: none;
       padding: 0 18px 18px;
       background: linear-gradient(180deg, #111827 0%, #09101d 100%);
+      text-align: center;
     }
 
     @media (max-width: 780px) {
+      .game-layout {
+        grid-template-columns: 1fr;
+        max-width: 420px;
+        gap: 14px;
+      }
+
       .hud {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: min(100%, 420px);
       }
 
       .control-panel {
@@ -361,35 +396,37 @@
 
     <section class="screen-shell">
       <div class="screen">
-        <div class="hud">
-          <div class="hud-card">
-            <span>Puntuacion</span>
-            <strong id="scoreValue">0000</strong>
-          </div>
-          <div class="hud-card">
-            <span>Fase</span>
-            <strong id="modeValue">Snake</strong>
-          </div>
-          <div class="hud-card">
-            <span>Objetivo</span>
-            <strong id="targetValue">500</strong>
-          </div>
-          <div class="hud-card">
-            <span>Estado</span>
-            <strong id="stateValue">Ready</strong>
-          </div>
-        </div>
+        <div class="game-layout">
+          <div class="stage">
+            <canvas id="gameCanvas" width="420" height="640" aria-label="Juego arcade"></canvas>
 
-        <div class="stage">
-          <canvas id="gameCanvas" width="420" height="640" aria-label="Juego arcade"></canvas>
+            <div class="overlay" id="overlay">
+              <h1 class="overlay-title" id="overlayTitle">Insert Coin</h1>
+              <p class="overlay-text" id="overlayText">
+                Empieza en Snake y encadena Arkanoid, Flappy Bird y Space Invaders en una sola partida arcade.
+              </p>
+              <div class="countdown" id="countdown" hidden>3</div>
+              <button class="coin-btn" id="coinButton" type="button">Insert Coin</button>
+            </div>
+          </div>
 
-          <div class="overlay" id="overlay">
-            <h1 class="overlay-title" id="overlayTitle">Insert Coin</h1>
-            <p class="overlay-text" id="overlayText">
-              Empieza en Snake y encadena Arkanoid, Flappy Bird y Space Invaders en una sola partida arcade.
-            </p>
-            <div class="countdown" id="countdown" hidden>3</div>
-            <button class="coin-btn" id="coinButton" type="button">Insert Coin</button>
+          <div class="hud">
+            <div class="hud-card">
+              <span>Puntuacion</span>
+              <strong id="scoreValue">0000</strong>
+            </div>
+            <div class="hud-card mode-card">
+              <span>Fase</span>
+              <strong id="modeValue">Snake</strong>
+            </div>
+            <div class="hud-card">
+              <span>Objetivo</span>
+              <strong id="targetValue">500</strong>
+            </div>
+            <div class="hud-card state-card">
+              <span>Estado</span>
+              <strong id="stateValue">Ready</strong>
+            </div>
           </div>
         </div>
 
@@ -415,7 +452,7 @@
       <div class="info-box">
         <h2 class="section-title">Reglas</h2>
         <p>
-          Snake termina al tocar pared. Arkanoid termina si cae la pelota. Flappy termina al chocar. En Space Invaders eliminas 20 extraterrestres a 25 puntos cada uno y pierdes si te alcanzan.
+          Snake termina al tocar pared. Arkanoid termina si cae la pelota. Flappy termina al chocar. En Space Invaders eliminas 15 extraterrestres a 30 puntos cada uno y pierdes si te alcanzan. En Dodge, el coche rojo esquiva coches azules durante 20 segundos.
         </p>
       </div>
 
@@ -455,17 +492,19 @@
 
     const WIDTH = canvas.width;
     const HEIGHT = canvas.height;
-    const SNAKE_CELL = 20;
+    const SNAKE_CELL = 24;
     const SNAKE_COLS = WIDTH / SNAKE_CELL;
     const SNAKE_ROWS = HEIGHT / SNAKE_CELL;
-    const FLAPPY_DURATION = 30000;
+    const FLAPPY_DURATION = 20000;
+    const DODGE_DURATION = 20000;
     const MODE_LABELS = {
       snake: "Snake",
       arkanoid: "Arkanoid",
       flappy: "Flappy",
-      invaders: "Invaders"
+      invaders: "Invaders",
+      dodge: "Dodge"
     };
-    const MODE_SEQUENCE = ["snake", "arkanoid", "flappy", "invaders"];
+    const MODE_SEQUENCE = ["snake", "arkanoid", "flappy", "invaders", "dodge"];
 
     const state = {
       running: false,
@@ -485,15 +524,17 @@
         dir: { x: 1, y: 0 },
         queuedDir: { x: 1, y: 0 },
         apple: null,
+        skulls: [],
         moveClock: 0,
         moveDelay: 140,
-        length: 3
+        length: 3,
+        appearances: 0
       },
       arkanoid: {
         paddle: null,
         ball: null,
         bricks: [],
-        rows: 4,
+        rows: 2,
         cols: 5,
         moveLeft: false,
         moveRight: false,
@@ -505,6 +546,7 @@
         spawnClock: 0,
         spawnInterval: 1400,
         elapsed: 0,
+        scoreClock: 0,
         duration: FLAPPY_DURATION,
         speedMultiplier: 1,
         collisionFlash: 0
@@ -517,7 +559,20 @@
         moveClock: 0,
         moveDelay: 520,
         moveLeft: false,
-        moveRight: false
+        moveRight: false,
+        speedMultiplier: 1
+      },
+      dodge: {
+        playerLane: 1,
+        playerY: HEIGHT - 120,
+        cars: [],
+        spawnClock: 0,
+        spawnInterval: 900,
+        elapsed: 0,
+        scoreClock: 0,
+        duration: DODGE_DURATION,
+        speedMultiplier: 1,
+        lanes: [WIDTH * 0.28, WIDTH * 0.5, WIDTH * 0.72]
       }
     };
 
@@ -531,6 +586,22 @@
 
     function getRandomMode() {
       return MODE_SEQUENCE[Math.floor(Math.random() * MODE_SEQUENCE.length)];
+    }
+
+    function getModeTimeLeft(duration, elapsed) {
+      return `${Math.max(0, Math.ceil((duration - elapsed) / 1000))}s`;
+    }
+
+    function getDodgeCarWidth() {
+      return 54;
+    }
+
+    function getDodgeCarHeight() {
+      return 96;
+    }
+
+    function getLaneX(laneIndex) {
+      return state.dodge.lanes[laneIndex];
     }
 
     function getNextMode() {
@@ -566,8 +637,14 @@
         startLoop();
         return;
       }
-      resetInvadersPhase();
-      updateHud("Invaders");
+      if (mode === "invaders") {
+        resetInvadersPhase();
+        updateHud("Invaders");
+        startLoop();
+        return;
+      }
+      resetDodgePhase();
+      updateHud("Dodge");
       startLoop();
     }
 
@@ -595,8 +672,10 @@
       if (state.mode === "invaders") {
         return `${state.invaders.aliens.length} alien`;
       }
-      const seconds = Math.max(0, Math.ceil((state.flappy.duration - state.flappy.elapsed) / 1000));
-      return `${seconds}s`;
+      if (state.mode === "dodge") {
+        return getModeTimeLeft(state.dodge.duration, state.dodge.elapsed);
+      }
+      return getModeTimeLeft(state.flappy.duration, state.flappy.elapsed);
     }
 
     function updateHud(statusText) {
@@ -628,14 +707,35 @@
 
     function placeApple() {
       let position = randomGridPosition();
-      while (state.snake.body.some((part) => part.x === position.x && part.y === position.y)) {
+      while (
+        state.snake.body.some((part) => part.x === position.x && part.y === position.y) ||
+        state.snake.skulls.some((part) => part.x === position.x && part.y === position.y)
+      ) {
         position = randomGridPosition();
       }
       state.snake.apple = position;
     }
 
+    function placeSkulls() {
+      state.snake.skulls = [];
+      const skullCount = Math.max(0, (state.snake.appearances - 1) * 2);
+
+      for (let i = 0; i < skullCount; i += 1) {
+        let position = randomGridPosition();
+        while (
+          state.snake.body.some((part) => part.x === position.x && part.y === position.y) ||
+          state.snake.skulls.some((part) => part.x === position.x && part.y === position.y) ||
+          (state.snake.apple && state.snake.apple.x === position.x && state.snake.apple.y === position.y)
+        ) {
+          position = randomGridPosition();
+        }
+        state.snake.skulls.push(position);
+      }
+    }
+
     function resetSnakePhase() {
       state.mode = "snake";
+      state.snake.appearances += 1;
       state.snake.body = [];
       for (let i = 0; i < state.snake.length; i += 1) {
         state.snake.body.push({ x: 8 - i, y: 16 });
@@ -644,6 +744,7 @@
       state.snake.queuedDir = { x: 1, y: 0 };
       state.snake.moveClock = 0;
       placeApple();
+      placeSkulls();
     }
 
     function resetArkanoidPhase() {
@@ -697,6 +798,7 @@
       state.flappy.pipes = [];
       state.flappy.spawnClock = 0;
       state.flappy.elapsed = 0;
+      state.flappy.scoreClock = 0;
       state.flappy.collisionFlash = 0;
       resetFlappyBirdPosition();
       spawnFlappyPipe();
@@ -704,23 +806,24 @@
 
     function resetInvadersPhase() {
       state.mode = "invaders";
+      state.invaders.speedMultiplier *= 1.1;
       state.invaders.player = {
         x: WIDTH / 2 - 24,
         y: HEIGHT - 46,
         width: 48,
         height: 18,
-        speed: state.mobileControls ? 300 : 360,
+        speed: (state.mobileControls ? 300 : 360) * state.invaders.speedMultiplier,
         cooldown: 0
       };
       state.invaders.bullets = [];
       state.invaders.direction = 1;
       state.invaders.moveClock = 0;
-      state.invaders.moveDelay = 520;
+      state.invaders.moveDelay = 520 / state.invaders.speedMultiplier;
       state.invaders.moveLeft = false;
       state.invaders.moveRight = false;
       state.invaders.aliens = [];
 
-      for (let row = 0; row < 4; row += 1) {
+      for (let row = 0; row < 2; row += 1) {
         for (let col = 0; col < 5; col += 1) {
           state.invaders.aliens.push({
             x: 42 + col * 68,
@@ -732,15 +835,38 @@
       }
     }
 
+    function resetDodgePhase() {
+      state.mode = "dodge";
+      state.dodge.speedMultiplier *= 1.1;
+      state.dodge.playerLane = 1;
+      state.dodge.cars = [];
+      state.dodge.spawnClock = 0;
+      state.dodge.elapsed = 0;
+      state.dodge.scoreClock = 0;
+      state.dodge.spawnInterval = 920 / state.dodge.speedMultiplier;
+    }
+
+    function spawnDodgeCar() {
+      const lane = Math.floor(Math.random() * 3);
+      state.dodge.cars.push({
+        lane,
+        x: getLaneX(lane) - getDodgeCarWidth() / 2,
+        y: -getDodgeCarHeight(),
+        width: getDodgeCarWidth(),
+        height: getDodgeCarHeight(),
+        speed: 220 * state.dodge.speedMultiplier
+      });
+    }
+
     function buildBricks() {
       const bricks = [];
       const rows = state.arkanoid.rows;
       const cols = state.arkanoid.cols;
-      const gap = 10;
-      const marginX = 20;
+      const gap = 34;
+      const marginX = 36;
       const top = 74;
       const brickWidth = (WIDTH - marginX * 2 - gap * (cols - 1)) / cols;
-      const brickHeight = 24;
+      const brickHeight = 14;
       const colors = ["#ff5f8c", "#ff9b42", "#ffe263", "#66f5c6"];
 
       for (let row = 0; row < rows; row += 1) {
@@ -777,8 +903,27 @@
       ctx.restore();
     }
 
+    function drawSnakeGrid() {
+      ctx.save();
+      ctx.strokeStyle = "rgba(126, 245, 255, 0.08)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= WIDTH; x += SNAKE_CELL) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, HEIGHT);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= HEIGHT; y += SNAKE_CELL) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(WIDTH, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     function drawSnake() {
-      drawBackgroundGrid();
+      drawSnakeGrid();
 
       const apple = state.snake.apple;
       if (!apple || !state.snake.body.length) {
@@ -787,8 +932,22 @@
 
       ctx.fillStyle = "#ff4f4f";
       ctx.beginPath();
-      ctx.roundRect(apple.x * SNAKE_CELL + 2, apple.y * SNAKE_CELL + 2, SNAKE_CELL - 4, SNAKE_CELL - 4, 6);
+      ctx.roundRect(apple.x * SNAKE_CELL + 3, apple.y * SNAKE_CELL + 3, SNAKE_CELL - 6, SNAKE_CELL - 6, 6);
       ctx.fill();
+
+      state.snake.skulls.forEach((part) => {
+        const x = part.x * SNAKE_CELL;
+        const y = part.y * SNAKE_CELL;
+        ctx.fillStyle = "#f8fafc";
+        ctx.beginPath();
+        ctx.arc(x + 7, y + 8, 4, 0, Math.PI * 2);
+        ctx.arc(x + 13, y + 8, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(x + 6, y + 11, 8, 5);
+        ctx.fillStyle = "#041016";
+        ctx.fillRect(x + 5, y + 6, 3, 3);
+        ctx.fillRect(x + 12, y + 6, 3, 3);
+      });
 
       state.snake.body.forEach((part, index) => {
         ctx.fillStyle = index === 0 ? "#9dff6f" : "#4df2d9";
@@ -808,9 +967,7 @@
         ctx.fillStyle = brick.color;
         ctx.shadowColor = brick.color;
         ctx.shadowBlur = 16;
-        ctx.beginPath();
-        ctx.roundRect(brick.x, brick.y, brick.width, brick.height, 6);
-        ctx.fill();
+        ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
         ctx.shadowBlur = 0;
       });
 
@@ -887,14 +1044,130 @@
 
       ctx.fillStyle = "#9dff6f";
       state.invaders.aliens.forEach((alien) => {
-        ctx.beginPath();
-        ctx.roundRect(alien.x, alien.y, alien.width, alien.height, 6);
-        ctx.fill();
-        ctx.fillStyle = "#041016";
-        ctx.fillRect(alien.x + 6, alien.y + 8, 4, 4);
-        ctx.fillRect(alien.x + alien.width - 10, alien.y + 8, 4, 4);
-        ctx.fillStyle = "#9dff6f";
+        const pattern = [
+          "01100110",
+          "11111111",
+          "11011011",
+          "11111111",
+          "00111100",
+          "01011010",
+          "10000001",
+          "01000010"
+        ];
+        const pixel = Math.min(alien.width / pattern[0].length, alien.height / pattern.length);
+        const offsetX = alien.x + (alien.width - pixel * pattern[0].length) / 2;
+        const offsetY = alien.y + (alien.height - pixel * pattern.length) / 2;
+
+        pattern.forEach((row, rowIndex) => {
+          row.split("").forEach((cell, colIndex) => {
+            if (cell === "1") {
+              ctx.fillRect(offsetX + colIndex * pixel, offsetY + rowIndex * pixel, pixel, pixel);
+            }
+          });
+        });
       });
+    }
+
+    function drawRoadMarkings() {
+      ctx.strokeStyle = "rgba(236, 247, 255, 0.24)";
+      ctx.lineWidth = 4;
+      [1, 2].forEach((divider) => {
+        const x = WIDTH * (divider / 3);
+        for (let y = 0; y < HEIGHT; y += 34) {
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, y + 18);
+          ctx.stroke();
+        }
+      });
+    }
+
+    function drawDodgeCar(x, y, width, height, color) {
+      const stripeColor = color === "#ef4444" ? "#ffd447" : "#8be0ff";
+      const bodyInset = width * 0.12;
+      const cabinInset = width * 0.23;
+      const windowWidth = width - cabinInset * 2;
+      const wheelWidth = Math.max(6, width * 0.16);
+      const wheelHeight = Math.max(10, height * 0.18);
+      const hoodHeight = height * 0.14;
+      const cabinHeight = height * 0.46;
+      const trunkHeight = height * 0.16;
+
+      ctx.save();
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x + width / 2, y);
+      ctx.quadraticCurveTo(x + width - bodyInset, y + hoodHeight * 0.35, x + width - bodyInset, y + hoodHeight);
+      ctx.lineTo(x + width - bodyInset * 0.6, y + hoodHeight + cabinHeight);
+      ctx.quadraticCurveTo(x + width - bodyInset * 0.45, y + height - trunkHeight * 0.7, x + width / 2, y + height);
+      ctx.quadraticCurveTo(x + bodyInset * 0.45, y + height - trunkHeight * 0.7, x + bodyInset * 0.6, y + hoodHeight + cabinHeight);
+      ctx.lineTo(x + bodyInset, y + hoodHeight);
+      ctx.quadraticCurveTo(x + bodyInset, y + hoodHeight * 0.35, x + width / 2, y);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      ctx.beginPath();
+      ctx.moveTo(x + width / 2, y + 4);
+      ctx.quadraticCurveTo(x + width - bodyInset - 3, y + hoodHeight * 0.4, x + width - bodyInset - 1, y + hoodHeight + 2);
+      ctx.lineTo(x + width - bodyInset * 0.95, y + hoodHeight + cabinHeight * 0.28);
+      ctx.quadraticCurveTo(x + width / 2, y + hoodHeight + cabinHeight * 0.1, x + bodyInset * 0.95, y + hoodHeight + cabinHeight * 0.28);
+      ctx.lineTo(x + bodyInset + 1, y + hoodHeight + 2);
+      ctx.quadraticCurveTo(x + bodyInset + 3, y + hoodHeight * 0.4, x + width / 2, y + 4);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = stripeColor;
+      ctx.fillRect(x + width * 0.31, y + hoodHeight * 0.28, width * 0.13, height * 0.78);
+      ctx.fillRect(x + width * 0.56, y + hoodHeight * 0.28, width * 0.13, height * 0.78);
+
+      ctx.fillStyle = "#111827";
+      ctx.beginPath();
+      ctx.roundRect(x + cabinInset, y + hoodHeight + 4, windowWidth, cabinHeight * 0.34, 6);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.roundRect(x + cabinInset + 3, y + hoodHeight + cabinHeight * 0.48, windowWidth - 6, cabinHeight * 0.24, 5);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,0.24)";
+      ctx.fillRect(x + cabinInset + 4, y + hoodHeight + 8, windowWidth - 8, 4);
+      ctx.fillRect(x + cabinInset + 7, y + hoodHeight + cabinHeight * 0.55, windowWidth - 14, 3);
+
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(x + 2, y + hoodHeight + 6, wheelWidth, wheelHeight);
+      ctx.fillRect(x + width - wheelWidth - 2, y + hoodHeight + 6, wheelWidth, wheelHeight);
+      ctx.fillRect(x + 2, y + height - wheelHeight - trunkHeight * 0.55, wheelWidth, wheelHeight);
+      ctx.fillRect(x + width - wheelWidth - 2, y + height - wheelHeight - trunkHeight * 0.55, wheelWidth, wheelHeight);
+
+      ctx.fillStyle = "#ffef88";
+      ctx.fillRect(x + width * 0.28, y + 6, width * 0.12, 5);
+      ctx.fillRect(x + width * 0.6, y + 6, width * 0.12, 5);
+
+      ctx.fillStyle = "#ff8b8b";
+      ctx.fillRect(x + width * 0.3, y + height - 10, width * 0.1, 5);
+      ctx.fillRect(x + width * 0.6, y + height - 10, width * 0.1, 5);
+
+      ctx.restore();
+    }
+
+    function drawDodge() {
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = "#111827";
+      ctx.fillRect(WIDTH * 0.1, 0, WIDTH * 0.8, HEIGHT);
+      drawRoadMarkings();
+
+      state.dodge.cars.forEach((car) => {
+        drawDodgeCar(car.x, car.y, car.width, car.height, "#3b82f6");
+      });
+
+      const playerX = getLaneX(state.dodge.playerLane) - getDodgeCarWidth() / 2;
+      drawDodgeCar(playerX, state.dodge.playerY, getDodgeCarWidth(), getDodgeCarHeight(), "#ef4444");
+
+      ctx.fillStyle = "#ecf7ff";
+      ctx.font = "bold 20px Trebuchet MS";
+      ctx.fillText(`Tiempo ${Math.max(0, Math.ceil((state.dodge.duration - state.dodge.elapsed) / 1000))}s`, 18, 28);
     }
 
     function drawFrame() {
@@ -908,8 +1181,10 @@
         drawArkanoid();
       } else if (state.mode === "flappy") {
         drawFlappy();
-      } else {
+      } else if (state.mode === "invaders") {
         drawInvaders();
+      } else {
+        drawDodge();
       }
     }
 
@@ -977,6 +1252,18 @@
       }
     }
 
+    function handleDodgeInput(direction) {
+      if (state.mode !== "dodge" || !state.running) {
+        return;
+      }
+      if (direction === "left") {
+        state.dodge.playerLane = Math.max(0, state.dodge.playerLane - 1);
+      }
+      if (direction === "right") {
+        state.dodge.playerLane = Math.min(2, state.dodge.playerLane + 1);
+      }
+    }
+
     function shootInvaderBullet() {
       if (state.mode !== "invaders" || !state.running) {
         return;
@@ -1022,6 +1309,12 @@
       state.snake.body.unshift(nextHead);
       const apple = state.snake.apple;
       const ateApple = nextHead.x === apple.x && nextHead.y === apple.y;
+      const hitSkull = state.snake.skulls.some((part) => part.x === nextHead.x && part.y === nextHead.y);
+
+      if (hitSkull) {
+        triggerGameOver("La serpiente ha mordido una calavera.");
+        return;
+      }
 
       if (ateApple) {
         state.score += 100;
@@ -1106,8 +1399,31 @@
 
         if (overlaps) {
           brick.alive = false;
-          ball.vy *= -1;
-          state.score += 25;
+          const overlapLeft = (ball.x + ball.radius) - brick.x;
+          const overlapRight = (brick.x + brick.width) - (ball.x - ball.radius);
+          const overlapTop = (ball.y + ball.radius) - brick.y;
+          const overlapBottom = (brick.y + brick.height) - (ball.y - ball.radius);
+          const minOverlapX = Math.min(overlapLeft, overlapRight);
+          const minOverlapY = Math.min(overlapTop, overlapBottom);
+
+          if (minOverlapY <= minOverlapX) {
+            if (overlapTop < overlapBottom) {
+              ball.y = brick.y - ball.radius;
+              ball.vy = -Math.abs(ball.vy);
+            } else {
+              ball.y = brick.y + brick.height + ball.radius;
+              ball.vy = Math.abs(ball.vy);
+            }
+          } else {
+            if (overlapLeft < overlapRight) {
+              ball.x = brick.x - ball.radius;
+              ball.vx = -Math.abs(ball.vx);
+            } else {
+              ball.x = brick.x + brick.width + ball.radius;
+              ball.vx = Math.abs(ball.vx);
+            }
+          }
+          state.score += 50;
           updateHud("Arkanoid");
           break;
         }
@@ -1126,6 +1442,7 @@
 
       state.flappy.elapsed += delta;
       state.flappy.spawnClock += delta;
+      state.flappy.scoreClock += delta;
       state.flappy.collisionFlash = Math.max(0, state.flappy.collisionFlash - delta);
 
       bird.vy += gravity * seconds;
@@ -1160,10 +1477,15 @@
         }
       }
 
+      while (state.flappy.scoreClock >= 2000 && state.flappy.elapsed <= state.flappy.duration) {
+        state.flappy.scoreClock -= 2000;
+        state.score += 25;
+        updateHud("Flappy");
+      }
+
       targetValue.textContent = getTargetLabel();
 
       if (state.flappy.elapsed >= state.flappy.duration) {
-        state.score += 500;
         transitionToNextMode("Preparando");
       }
     }
@@ -1219,7 +1541,7 @@
           if (hit) {
             bullet.y = -100;
             destroyed = true;
-            state.score += 25;
+            state.score += 50;
             break;
           }
         }
@@ -1249,6 +1571,58 @@
       }
     }
 
+    function updateDodge(delta) {
+      const seconds = delta / 1000;
+      state.dodge.elapsed += delta;
+      state.dodge.spawnClock += delta;
+      state.dodge.scoreClock += delta;
+
+      if (state.dodge.spawnClock >= state.dodge.spawnInterval) {
+        state.dodge.spawnClock = 0;
+        spawnDodgeCar();
+      }
+
+      state.dodge.cars.forEach((car) => {
+        car.y += car.speed * seconds;
+      });
+      state.dodge.cars = state.dodge.cars.filter((car) => car.y < HEIGHT + car.height);
+
+      const playerX = getLaneX(state.dodge.playerLane) - getDodgeCarWidth() / 2;
+      const playerY = state.dodge.playerY;
+      const playerWidth = getDodgeCarWidth();
+      const playerHeight = getDodgeCarHeight();
+
+      const hitCar = state.dodge.cars.some((car) => {
+        return (
+          playerX < car.x + car.width &&
+          playerX + playerWidth > car.x &&
+          playerY < car.y + car.height &&
+          playerY + playerHeight > car.y
+        );
+      });
+
+      if (hitCar) {
+        if (state.dummyMode) {
+          state.dodge.cars = state.dodge.cars.filter((car) => !(Math.abs(car.y - playerY) < playerHeight));
+        } else {
+          triggerGameOver("El coche rojo ha chocado.");
+          return;
+        }
+      }
+
+      while (state.dodge.scoreClock >= 2000 && state.dodge.elapsed <= state.dodge.duration) {
+        state.dodge.scoreClock -= 2000;
+        state.score += 25;
+        updateHud("Dodge");
+      }
+
+      targetValue.textContent = getTargetLabel();
+
+      if (state.dodge.elapsed >= state.dodge.duration) {
+        transitionToNextMode("Preparando");
+      }
+    }
+
     function loop(timestamp) {
       if (!state.running) {
         return;
@@ -1263,8 +1637,10 @@
         updateArkanoid(delta);
       } else if (state.mode === "flappy") {
         updateFlappy(delta);
-      } else {
+      } else if (state.mode === "invaders") {
         updateInvaders(delta);
+      } else {
+        updateDodge(delta);
       }
 
       drawFrame();
@@ -1321,8 +1697,14 @@
       state.initialCycleComplete = false;
       state.gameOver = false;
       state.snake.length = 3;
+      state.snake.appearances = 0;
+      state.snake.skulls = [];
       state.arkanoid.speedMultiplier = 1;
       state.flappy.speedMultiplier = 1;
+      state.invaders.speedMultiplier = 1;
+      state.dodge.speedMultiplier = 1;
+      state.dodge.cars = [];
+      state.dodge.playerLane = 1;
       state.invaders.moveLeft = false;
       state.invaders.moveRight = false;
       resetSnakePhase();
@@ -1345,7 +1727,7 @@
         touchControls.classList.add("active");
         touchControlsMobile.classList.add("active");
       } else {
-        controlsHint.textContent = "Teclado: Snake usa las 4 flechas, Arkanoid izquierda y derecha, Flappy arriba, Invaders izquierda, derecha y arriba para disparar.";
+        controlsHint.textContent = "Teclado: Snake usa las 4 flechas, Arkanoid izquierda y derecha, Flappy arriba, Invaders izquierda/derecha y arriba para disparar, Dodge izquierda y derecha.";
         deviceHint.textContent = "Control por teclado activo";
         touchControls.classList.remove("active");
         touchControlsMobile.classList.remove("active");
@@ -1367,6 +1749,8 @@
             enabled = direction === "up";
           } else if (state.mode === "invaders") {
             enabled = direction === "left" || direction === "right" || direction === "up";
+          } else if (state.mode === "dodge") {
+            enabled = direction === "left" || direction === "right";
           }
 
           button.classList.toggle("disabled", !enabled);
@@ -1397,10 +1781,12 @@
         handleSnakeInput("left");
         handleArkanoidInput("left", true);
         handleInvadersInput("left", true);
+        handleDodgeInput("left");
       } else if (key === "ArrowRight") {
         handleSnakeInput("right");
         handleArkanoidInput("right", true);
         handleInvadersInput("right", true);
+        handleDodgeInput("right");
       }
     }
 
@@ -1439,6 +1825,12 @@
                 handleInvadersInput(direction, true);
               }
             }
+            if (state.mode === "dodge") {
+              if (direction === "left" || direction === "right") {
+                handleDodgeInput(direction);
+                return;
+              }
+            }
             if (direction === "left" || direction === "right") {
               handleArkanoidInput(direction, true);
             }
@@ -1466,7 +1858,7 @@
       resetSnakePhase();
       updateHud("Ready");
       drawFrame();
-      showOverlay("Insert Coin", "Empieza en Snake, pasa por Arkanoid, Flappy y Space Invaders, y sigue encadenando fases arcade.", true);
+      showOverlay("Insert Coin", "Empieza en Snake, pasa por Arkanoid, Flappy, Space Invaders y Dodge, y sigue encadenando fases arcade.", true);
 
       coinButton.addEventListener("click", startGame);
       window.addEventListener("keydown", onKeyDown, { passive: false });
